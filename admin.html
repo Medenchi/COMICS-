@@ -2,240 +2,42 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Админ-панель</title>
-  <script src="https://telegram.org/js/telegram-web-app.js"></script> 
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap');
-    :root {
-      --primary-color: #28a745; 
-      --background-color: #f0f2f5;
-      --text-color: #333;
-      --card-bg: #ffffff;
-      --shadow: 0 4px 8px rgba(0,0,0,0.1);
-      --input-border: #ced4da;
-    }
-
-    body {
-      font-family: 'Montserrat', sans-serif;
-      margin: 0;
-      padding: 20px;
-      background-color: var(--background-color);
-      color: var(--text-color);
-      min-height: 100vh;
-    }
-
-    .admin-container {
-      max-width: 600px;
-      margin: 0 auto;
-      background-color: var(--card-bg);
-      padding: 30px;
-      border-radius: 12px;
-      box-shadow: var(--shadow);
-    }
-
-    h1 {
-      text-align: center;
-      color: var(--primary-color);
-      margin-bottom: 25px;
-    }
-
-    .form-group {
-      margin-bottom: 20px;
-    }
-
-    label {
-      display: block;
-      margin-bottom: 8px;
-      font-weight: bold;
-    }
-
-    input[type="text"], input[type="file"] {
-      width: 100%;
-      padding: 12px;
-      border: 1px solid var(--input-border);
-      border-radius: 8px;
-      box-sizing: border-box;
-    }
-
-    input[type="file"] {
-      padding: 5px;
-    }
-
-    .submit-btn {
-      width: 100%;
-      padding: 15px;
-      background-color: var(--primary-color);
-      color: white;
-      border: none;
-      border-radius: 8px;
-      font-size: 1.1em;
-      font-weight: bold;
-      cursor: pointer;
-      transition: background-color 0.3s;
-    }
-
-    .submit-btn:disabled {
-      background-color: #94d8a2;
-      cursor: not-allowed;
-    }
-
-    .submit-btn:hover:not(:disabled) {
-      background-color: #218838;
-    }
-
-    #status {
-      margin-top: 20px;
-      text-align: center;
-      font-weight: bold;
-      padding: 10px;
-      border-radius: 8px;
-      display: none;
-    }
-
-    #status.success { background-color: #d4edda; color: #155724; }
-    #status.error   { background-color: #f8d7da; color: #721c24; }
-    #status.loading { background-color: #cce5ff; color: #004085; }
-
-    .comics-list {
-      margin-top: 40px;
-    }
-
-    .comic-item {
-      border: 1px solid #ddd;
-      border-radius: 8px;
-      padding: 15px;
-      margin-bottom: 15px;
-      position: relative;
-    }
-
-    .comic-title {
-      font-weight: bold;
-      font-size: 1.1em;
-    }
-
-    .delete-btn {
-      position: absolute;
-      top: 10px;
-      right: 10px;
-      background-color: red;
-      color: white;
-      border: none;
-      padding: 6px 10px;
-      border-radius: 6px;
-      cursor: pointer;
-    }
-
-    .delete-btn:hover {
-      background-color: darkred;
-    }
-  </style>
+  <title>Добавить комикс</title>
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
 
 <div class="admin-container">
-  <h1>Создать новую статью</h1>
+  <h1>Создать новый комикс</h1>
   <form id="comic-form">
     <div class="form-group">
       <label for="title">Название комикса</label>
-      <input type="text" id="title" name="title" required>
+      <input type="text" id="title" name="title" required />
     </div>
     <div class="form-group">
       <label for="images">Страницы комикса (можно выбрать несколько)</label>
-      <input type="file" id="images" name="images" multiple required accept="image/*">
+      <input type="file" id="images" name="images" multiple accept="image/*" required />
     </div>
-    <button type="submit" class="submit-btn" id="submit-btn">Создать</button>
+    <button type="submit" class="submit-btn">Сохранить</button>
   </form>
   <div id="status"></div>
-
-  <!-- Список комиксов -->
-  <div class="comics-list" id="comicsList"></div>
 </div>
 
-<!-- Firebase SDK -->
-<script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script> 
-<script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore-compat.js"></script> 
-<script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-storage-compat.js"></script> 
-
 <script>
-  const firebaseConfig = {
-    apiKey: "AIzaSyCLOW7SRFGz05qtmnhOV0nCTO69Ea1EbHI",
-    authDomain: "html5gsait.firebaseapp.com",
-    projectId: "html5gsait",
-    storageBucket: "html5gsait.firebasestorage.app",
-    messagingSenderId: "825366498187",
-    appId: "1:825366498187:web:534990550b5ab3c3a5fd8e",
-    measurementId: "G-Q3Z19NKCMJ"
-  };
-
-  // Инициализация Firebase
-  firebase.initializeApp(firebaseConfig);
-  const db = firebase.firestore();
-  const storage = firebase.storage();
-
   const form = document.getElementById('comic-form');
   const titleInput = document.getElementById('title');
   const imagesInput = document.getElementById('images');
-  const submitBtn = document.getElementById('submit-btn');
   const statusEl = document.getElementById('status');
-  const comicsList = document.getElementById('comicsList');
 
   function showStatus(message, type) {
     statusEl.textContent = message;
-    statusEl.className = type;
+    statusEl.className = 'status ' + type;
     statusEl.style.display = 'block';
-  }
-
-  async function loadComics() {
-    try {
-      const snapshot = await db.collection('comics').get();
-      comicsList.innerHTML = '';
-      snapshot.forEach(doc => {
-        const data = doc.data();
-        const item = document.createElement('div');
-        item.className = 'comic-item';
-        item.innerHTML = `
-          <div class="comic-title">${data.title}</div>
-          <button class="delete-btn" data-id="${doc.id}">Удалить</button>
-        `;
-        comicsList.appendChild(item);
-      });
-
-      document.querySelectorAll('.delete-btn').forEach(btn => {
-        btn.addEventListener('click', async () => {
-          const comicId = btn.getAttribute('data-id');
-          if (!confirm("Вы уверены, что хотите удалить этот комикс?")) return;
-
-          showStatus('Удаление...', 'loading');
-          try {
-            const docRef = db.collection('comics').doc(comicId);
-            const docSnap = await docRef.get();
-            const data = docSnap.data();
-
-            const deletePromises = data.imageUrls.map(url => {
-              const path = decodeURIComponent(new URL(url).pathname.replace('/o/', '').replace(/%2F/g, '/'));
-              return storage.ref(path).delete();
-            });
-
-            await Promise.all(deletePromises);
-
-            await docRef.delete();
-
-            showStatus('Комикс удален!', 'success');
-            loadComics(); // Обновляем список
-          } catch (error) {
-            console.error("Ошибка при удалении:", error);
-            showStatus('Ошибка удаления.', 'error');
-          }
-        });
-      });
-    } catch (error) {
-      console.error("Ошибка загрузки комиксов:", error);
-    }
   }
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
+
     const title = titleInput.value.trim();
     const files = imagesInput.files;
 
@@ -244,39 +46,34 @@
       return;
     }
 
-    submitBtn.disabled = true;
-    showStatus('Загрузка изображений...', 'loading');
+    const readerPromises = Array.from(files).map(file => {
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.readAsDataURL(file);
+      });
+    });
 
     try {
-      const imageUrls = [];
-      const uploadPromises = Array.from(files).map(file => {
-        const fileName = `${Date.now()}-${file.name}`;
-        const storageRef = storage.ref(`comics/${fileName}`);
-        return storageRef.put(file)
-          .then(snapshot => snapshot.ref.getDownloadURL());
-      });
+      const imageDataUrls = await Promise.all(readerPromises);
 
-      const downloadedUrls = await Promise.all(uploadPromises);
-      imageUrls.push(...downloadedUrls);
-
-      await db.collection('comics').add({
+      const comic = {
+        id: Date.now(),
         title,
-        imageUrls,
-        createdAt: firebase.firestore.FieldValue.serverTimestamp()
-      });
+        images: imageDataUrls
+      };
 
-      showStatus('Статья успешно создана!', 'success');
+      const comics = JSON.parse(localStorage.getItem('comics') || '[]');
+      comics.unshift(comic); // Добавляем в начало
+      localStorage.setItem('comics', JSON.stringify(comics));
+
+      showStatus('Комикс сохранён!', 'success');
       form.reset();
-      loadComics(); // Обновляем список
-    } catch (error) {
-      console.error("Ошибка создания статьи:", error);
-      showStatus('Произошла ошибка. Попробуйте еще раз.', 'error');
-    } finally {
-      submitBtn.disabled = false;
+    } catch (err) {
+      console.error(err);
+      showStatus('Ошибка при сохранении.', 'error');
     }
   });
-
-  window.onload = loadComics;
 </script>
 
 </body>
