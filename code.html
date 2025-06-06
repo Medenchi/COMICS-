@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Комиксы</title>
+    <!-- Скрипт для интеграции с Telegram Web App -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        /* Встроенные CSS стили */
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap');
+
+        :root {
+            --primary-color: #007bff;
+            --secondary-color: #6c757d;
+            --background-color: #f8f9fa;
+            --text-color: #212529;
+            --card-bg: #ffffff;
+            --shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        body {
+            font-family: 'Montserrat', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: var(--background-color);
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 800px;
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            overflow: hidden;
+        }
+
+        header {
+            padding: 20px;
+            background-color: var(--primary-color);
+            color: white;
+            text-align: center;
+        }
+
+        #comic-title {
+            margin: 0;
+            font-size: 1.8em;
+        }
+
+        main {
+            padding: 20px;
+        }
+
+        #comic-images {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        #comic-images img {
+            width: 100%;
+            height: auto;
+            border-radius: 8px;
+            border: 1px solid #eee;
+        }
+
+        .navigation {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px;
+            border-top: 1px solid #eee;
+        }
+
+        .nav-button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: bold;
+            transition: background-color 0.3s, transform 0.2s;
+        }
+
+        .nav-button:hover {
+            background-color: #0056b3;
+        }
+        
+        .nav-button:active {
+            transform: scale(0.95);
+        }
+
+        .nav-button:disabled {
+            background-color: var(--secondary-color);
+            cursor: not-allowed;
+        }
+
+        #status {
+            font-size: 1.2em;
+            color: var(--secondary-color);
+            text-align: center;
+            padding: 50px 0;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <header>
+            <h1 id="comic-title">Загрузка...</h1>
+        </header>
+        
+        <main id="comic-content">
+            <div id="status">Пожалуйста, подождите, комиксы загружаются...</div>
+            <div id="comic-images"></div>
+        </main>
+        
+        <div class="navigation">
+            <button id="prev-btn" class="nav-button" disabled>⬅️ Назад</button>
+            <span id="comic-counter">0 / 0</span>
+            <button id="next-btn" class="nav-button" disabled>Вперёд ➡️</button>
+        </div>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore-compat.js"></script>
+
+    <script>
+        // --- ВАЖНО: ЗАМЕНИТЕ ЭТИ ДАННЫЕ НА ВАШИ ДАННЫЕ ИЗ FIREBASE ---
+        const firebaseConfig = {
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_PROJECT_ID.appspot.com",
+            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+            appId: "YOUR_APP_ID"
+        };
+        // -----------------------------------------------------------
+
+        // Инициализация Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        // Глобальные переменные
+        let comics = [];
+        let currentIndex = 0;
+
+        // Элементы DOM
+        const comicTitleEl = document.getElementById('comic-title');
+        const comicImagesEl = document.getElementById('comic-images');
+        const statusEl = document.getElementById('status');
+        const prevBtn = document.getElementById('prev-btn');
+        const nextBtn = document.getElementById('next-btn');
+        const counterEl = document.getElementById('comic-counter');
+
+        // Функция для отображения комикса по индексу
+        function displayComic(index) {
+            if (comics.length === 0) return;
+
+            const comic = comics[index];
+            comicTitleEl.textContent = comic.title;
+            
+            // Очищаем предыдущие изображения
+            comicImagesEl.innerHTML = '';
+
+            // Добавляем новые изображения
+            comic.imageUrls.forEach(url => {
+                const img = document.createElement('img');
+                img.src = url;
+                img.alt = comic.title;
+                comicImagesEl.appendChild(img);
+            });
+            
+            statusEl.style.display = 'none';
+            comicImagesEl.style.display = 'flex';
+
+            updateNavigation();
+        }
+        
+        // Функция для обновления кнопок навигации и счетчика
+        function updateNavigation() {
+            counterEl.textContent = `${currentIndex + 1} / ${comics.length}`;
+            prevBtn.disabled = currentIndex === 0;
+            nextBtn.disabled = currentIndex === comics.length - 1;
+        }
+
+        // Загрузка комиксов из Firestore
+        async function fetchComics() {
+            try {
+                const snapshot = await db.collection('comics').orderBy('createdAt', 'desc').get();
+                if (snapshot.empty) {
+                    statusEl.textContent = 'Пока нет ни одного комикса.';
+                    return;
+                }
+                
+                snapshot.forEach(doc => {
+                    comics.push({ id: doc.id, ...doc.data() });
+                });
+                
+                displayComic(currentIndex);
+
+            } catch (error) {
+                console.error("Ошибка при загрузке комиксов: ", error);
+                statusEl.textContent = 'Не удалось загрузить комиксы. Попробуйте позже.';
+            }
+        }
+
+        // Обработчики событий для кнопок
+        prevBtn.addEventListener('click', () => {
+            if (currentIndex > 0) {
+                currentIndex--;
+                displayComic(currentIndex);
+            }
+        });
+
+        nextBtn.addEventListener('click', () => {
+            if (currentIndex < comics.length - 1) {
+                currentIndex++;
+                displayComic(currentIndex);
+            }
+        });
+
+        // Инициализация Telegram Web App (необязательно для этой логики, но нужно для работы в ТГ)
+        try {
+            Telegram.WebApp.ready();
+        } catch(e) {
+            console.warn("Telegram WebApp script not found or failed to initialize.");
+        }
+        
+        // Запускаем загрузку при открытии страницы
+        fetchComics();
+
+    </script>
+</body>
+</html>
