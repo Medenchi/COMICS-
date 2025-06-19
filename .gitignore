@@ -1,0 +1,13 @@
+# Папки виртуального окружения Python
+venv/
+.venv/
+env/
+.env/
+
+# Кэш Python
+__pycache__/
+*.pyc
+
+# Файлы IDE (если вы используете)
+.idea/
+.vscode/
